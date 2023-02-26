@@ -23,7 +23,6 @@ const limiter = rateLimit({
 const app = express();
 const port = process.env.PORT;
 
-app.use(limiter);
 app.use(bodyParser.json());
 
 app.get("/message", (req, res) => {
@@ -31,7 +30,7 @@ app.get("/message", (req, res) => {
   res.send(JSON.stringify(result));
 })
 
-app.post("/message", (req, res) => {
+app.post("/message", limiter, (req, res) => {
   const body = messageSchema.safeParse(req.body);
 
   if (body.success) {
