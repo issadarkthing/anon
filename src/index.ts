@@ -30,7 +30,7 @@ app.post("/message", (req, res) => {
 
     db
       .prepare("INSERT INTO messages (ip, user_agent, time, message) VALUES (?, ?, ?, ?)")
-      .run([req.ip, req.get("User-Agent"), new Date(), data.message]);
+      .run([req.ip, req.get("User-Agent"), (new Date()).toISOString(), data.message]);
 
     res.send(`message: ${JSON.stringify(body.data)}`);
   } else {
