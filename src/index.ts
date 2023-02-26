@@ -2,6 +2,7 @@ import express from "express";
 import { config } from "dotenv";
 import bodyParser from "body-parser";
 import sqlite from "better-sqlite3";
+import rateLimit from "express-rate-limit";
 import { messageSchema } from "./structure/Message";
 import { schema } from "./schema";
 
@@ -12,9 +13,17 @@ db.pragma("journal_mode = WAL");
 
 db.exec(schema);
 
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 const app = express();
 const port = process.env.PORT;
 
+app.use(limiter);
 app.use(bodyParser.json());
 
 app.get("/message", (req, res) => {
