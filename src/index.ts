@@ -32,7 +32,7 @@ app.post("/message", (req, res) => {
       .prepare("INSERT INTO messages (ip, user_agent, time, message) VALUES (?, ?, ?, ?)")
       .run([req.ip, req.get("User-Agent"), (new Date()).toISOString(), data.message]);
 
-    res.send(`message: ${JSON.stringify(body.data)}`);
+    res.send(JSON.stringify(body.data));
   } else {
     res.send("invalid body");
     console.error(`invalid body: ${body.error.message}`);
