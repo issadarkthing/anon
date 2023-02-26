@@ -1,4 +1,4 @@
-import express from "express";
+import express, { NextFunction, Request, Response } from "express";
 import { config } from "dotenv";
 import bodyParser from "body-parser";
 import sqlite from "better-sqlite3";
@@ -25,7 +25,18 @@ const port = process.env.PORT;
 
 app.use(bodyParser.json());
 
-app.get("/message", (req, res) => {
+function protectedRoute(req: Request, res: Response, next: NextFunction) {
+  const token = req.get("token");
+
+  if (token === process.env.TOKEN) {
+    next();
+  } else {
+    res.status(401).send("unauthorized");
+    console.error(`unauthorized: ${req.ip} trying to access protected route`);
+  }
+}
+
+app.get("/message", protectedRoute, (req, res) => {
   const result = db.prepare("SELECT * FROM messages").all();
   res.send(JSON.stringify(result));
 })
@@ -42,7 +53,7 @@ app.post("/message", limiter, (req, res) => {
 
     res.send(JSON.stringify(body.data));
   } else {
-    res.send("invalid body");
+    res.status(400).send("invalid body");
     console.error(`invalid body: ${body.error.message}`);
   }
 });
