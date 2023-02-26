@@ -4,7 +4,8 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "nodemon dist/index.js",
-    "watch": "tsc -w"
+    "watch": "tsc -w",
+    "clean": "rm main.db*"
   },
   "dependencies": {
     "better-sqlite3": "^8.1.0",
