@@ -1,2 +1,5 @@
 dist
 node_modules
+main.db
+main.db-shm
+main.db-wal
