@@ -36,9 +36,9 @@ function protectedRoute(req: Request, res: Response, next: NextFunction) {
   }
 }
 
-app.set("trust proxy", 2);
+app.set("trust proxy", 1);
 
-app.get("/ip", (req, res) => res.send(req.ip));
+app.get("/ip", (req, res) => res.send(`${req.ip} ${req.get("X-Real-IP")}`));
 
 app.get("/message", protectedRoute, (req, res) => {
   const result = db.prepare("SELECT * FROM messages").all();
