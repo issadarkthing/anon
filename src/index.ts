@@ -42,7 +42,7 @@ function protectedRoute(req: Request, res: Response, next: NextFunction) {
 
 app.set("trust proxy", "loopback");
 
-app.get("/replies", limiter, (req, res) => {
+app.get("/replies", (req, res) => {
   const result = db 
     .prepare(`SELECT 
         replies.id, 
