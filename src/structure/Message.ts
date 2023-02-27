@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const MAX_STRING = 1024;
+const MAX_STRING = 256;
 
 export const messageSchema = z.object({
   message: z.string().max(MAX_STRING),
