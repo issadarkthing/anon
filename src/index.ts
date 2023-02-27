@@ -55,7 +55,7 @@ app.get("/replies", limiter, (req, res) => {
   res.send(JSON.stringify(result));
 })
 
-app.post("/reply", limiter, protectedRoute, (req, res) => {
+app.post("/reply/:id", limiter, protectedRoute, (req, res) => {
   const body = replySchema.safeParse(req.body);
 
   if (!body.success) {
@@ -65,20 +65,21 @@ app.post("/reply", limiter, protectedRoute, (req, res) => {
   }
 
   const data = body.data;
+  const messageId = req.params["id"];
 
   const message = db
     .prepare("SELECT * FROM messages WHERE id = ?")
-    .get([data.messageId]);
+    .get(messageId);
 
   if (!message) {
-    res.status(404).send(`cannot find message "${data.messageId}"`);
-    console.error(`no data: cannot find message "${data.messageId}"`);
+    res.status(404).send(`cannot find message "${messageId}"`);
+    console.error(`no data: cannot find message "${messageId}"`);
     return;
   }
 
   db
     .prepare("INSERT INTO replies (time, message_id, reply) VALUES (?, ?, ?)")
-    .run([(new Date()).toISOString(), data.messageId, data.reply]);
+    .run([(new Date()).toISOString(), messageId, data.reply]);
 
   res.sendStatus(200);
 });

@@ -7,7 +7,6 @@ export const messageSchema = z.object({
 });
 
 export const replySchema = z.object({
-  messageId: z.number().max(Number.MAX_SAFE_INTEGER),
   reply: z.string().max(10 * MAX_STRING),
 });
 
