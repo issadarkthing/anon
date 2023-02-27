@@ -5,6 +5,7 @@ import sqlite from "better-sqlite3";
 import rateLimit from "express-rate-limit";
 import { messageSchema } from "./structure/Message";
 import { schema } from "./schema";
+import cors from "cors";
 
 config();
 
@@ -23,6 +24,9 @@ const limiter = rateLimit({
 const app = express();
 const port = process.env.PORT;
 
+app.use(cors({
+  origin: "*",
+}))
 app.use(bodyParser.json());
 
 function protectedRoute(req: Request, res: Response, next: NextFunction) {
