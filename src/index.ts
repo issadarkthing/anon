@@ -38,8 +38,6 @@ function protectedRoute(req: Request, res: Response, next: NextFunction) {
 
 app.set("trust proxy", "loopback");
 
-app.get("/ip", (req, res) => res.send(`${req.ip} ${req.get("X-Real-IP")}`));
-
 app.get("/message", protectedRoute, (req, res) => {
   const result = db.prepare("SELECT * FROM messages").all();
   res.send(JSON.stringify(result));
