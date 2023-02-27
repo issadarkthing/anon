@@ -36,7 +36,6 @@ function protectedRoute(req: Request, res: Response, next: NextFunction) {
   }
 }
 
-app.set("trust proxy", 3);
 
 app.get("/ip", (req, res) => res.send(`${req.ip} ${req.get("X-Real-IP")}`));
 
