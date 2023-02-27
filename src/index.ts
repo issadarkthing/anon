@@ -51,7 +51,11 @@ app.get("/replies", (req, res) => {
         replies.reply,
         messages.message
       FROM replies 
-      INNER JOIN messages ON replies.message_id = messages.id`) .all();
+      INNER JOIN messages ON replies.message_id = messages.id
+      `) 
+    .all();
+
+  result.reverse();
   res.send(JSON.stringify(result));
 })
 
