@@ -36,6 +36,10 @@ function protectedRoute(req: Request, res: Response, next: NextFunction) {
   }
 }
 
+app.set("trust proxy", 1);
+
+app.get("/ip", (req, res) => res.send(req.ip));
+
 app.get("/message", protectedRoute, (req, res) => {
   const result = db.prepare("SELECT * FROM messages").all();
   res.send(JSON.stringify(result));
@@ -49,7 +53,7 @@ app.post("/message", limiter, (req, res) => {
 
     db
       .prepare("INSERT INTO messages (ip, user_agent, time, message) VALUES (?, ?, ?, ?)")
-      .run([req.ip, req.get("User-Agent"), (new Date()).toISOString(), data.message]);
+      .run([req.get("X-Real-IP"), req.get("User-Agent"), (new Date()).toISOString(), data.message]);
 
     res.send(JSON.stringify(body.data));
   } else {
