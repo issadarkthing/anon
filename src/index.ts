@@ -3,7 +3,7 @@ import { config } from "dotenv";
 import bodyParser from "body-parser";
 import sqlite from "better-sqlite3";
 import rateLimit from "express-rate-limit";
-import { messageSchema } from "./structure/Message";
+import { messageSchema, replySchema } from "./structure/Message";
 import { schema } from "./schema";
 import cors from "cors";
 
@@ -42,7 +42,48 @@ function protectedRoute(req: Request, res: Response, next: NextFunction) {
 
 app.set("trust proxy", "loopback");
 
-app.get("/message", protectedRoute, (req, res) => {
+app.get("/replies", limiter, (req, res) => {
+  const result = db 
+    .prepare(`SELECT 
+        replies.id, 
+        replies.time,
+        replies.message_id,
+        replies.reply,
+        messages.message
+      FROM replies 
+      INNER JOIN messages ON replies.message_id = messages.id`) .all();
+  res.send(JSON.stringify(result));
+})
+
+app.post("/reply", limiter, protectedRoute, (req, res) => {
+  const body = replySchema.safeParse(req.body);
+
+  if (!body.success) {
+    res.status(400).send("invalid body");
+    console.error(`invalid body: ${body.error.message}`);
+    return;
+  }
+
+  const data = body.data;
+
+  const message = db
+    .prepare("SELECT * FROM messages WHERE id = ?")
+    .get([data.messageId]);
+
+  if (!message) {
+    res.status(404).send(`cannot find message "${data.messageId}"`);
+    console.error(`no data: cannot find message "${data.messageId}"`);
+    return;
+  }
+
+  db
+    .prepare("INSERT INTO replies (time, message_id, reply) VALUES (?, ?, ?)")
+    .run([(new Date()).toISOString(), data.messageId, data.reply]);
+
+  res.sendStatus(200);
+});
+
+app.get("/messages", protectedRoute, (req, res) => {
   const result = db.prepare("SELECT * FROM messages").all();
   res.send(JSON.stringify(result));
 })
