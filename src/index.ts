@@ -100,7 +100,16 @@ app.post("/reply/:id", limiter, protectedRoute, (req, res) => {
 });
 
 app.get("/messages", protectedRoute, (req, res) => {
-  const result = db.prepare("SELECT * FROM messages").all();
+  const result = db
+    .prepare(`SELECT 
+        messages.id,
+        messages.message,
+        replies.reply,
+        replies.time
+      FROM messages 
+      FULL OUTER JOIN replies ON messages.id = replies.message_id`)
+    .all();
+
   res.send(JSON.stringify(result));
 })
 
