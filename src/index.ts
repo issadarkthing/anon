@@ -105,11 +105,13 @@ app.get("/messages", protectedRoute, (req, res) => {
         messages.id,
         messages.message,
         replies.reply,
-        replies.time
+        replies.time AS reply_time,
+        messages.time AS message_time
       FROM messages 
       FULL OUTER JOIN replies ON messages.id = replies.message_id`)
     .all();
 
+  result.reverse();
   res.send(JSON.stringify(result));
 })
 
