@@ -42,6 +42,17 @@ function protectedRoute(req: Request, res: Response, next: NextFunction) {
 
 app.set("trust proxy", "loopback");
 
+app.post("/authenticate", limiter, (req, res) => {
+  const token = req.get("token");
+
+  if (token === process.env.TOKEN) {
+    res.sendStatus(200);
+  } else {
+    res.status(401).send("unauthorized");
+    console.error(`unauthorized: ${req.ip} trying to access protected route`);
+  }
+});
+
 app.get("/replies", (req, res) => {
   const result = db 
     .prepare(`SELECT 
