@@ -104,6 +104,8 @@ app.get("/messages", protectedRoute, (req, res) => {
     .prepare(`SELECT 
         messages.id,
         messages.message,
+        messages.ip,
+        messages.user_agent,
         replies.reply,
         replies.time AS reply_time,
         messages.time AS message_time
