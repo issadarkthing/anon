@@ -6,8 +6,11 @@ import rateLimit from "express-rate-limit";
 import { messageSchema, replySchema } from "./structure/Message";
 import { schema } from "./schema";
 import cors from "cors";
+import { Mail } from "./structure/Mail";
 
 config();
+
+const mail = new Mail();
 
 const db = sqlite("main.db");
 db.pragma("journal_mode = WAL");
@@ -122,12 +125,23 @@ app.post("/message", limiter, (req, res) => {
 
   if (body.success) {
     const data = body.data;
+    const ip = req.get("X-Real-IP");
+    const userAgent = req.get("User-Agent");
+    const now = (new Date());
+    const date = now.toISOString();
 
     db
       .prepare("INSERT INTO messages (ip, user_agent, time, message) VALUES (?, ?, ?, ?)")
-      .run([req.get("X-Real-IP"), req.get("User-Agent"), (new Date()).toISOString(), data.message]);
+      .run([ip, userAgent, date, data.message]);
 
     res.send(JSON.stringify(body.data));
+
+    mail.sendMail({
+      subject: "Someone sent you a message on anon.issadarkthing.com",
+      text: `Message:\n${body.data.message}`,
+      html: `ip: ${ip}<br>user agent: ${userAgent}<br>message: ${body.data.message}<br>datetime: ${now}`,
+    });
+
   } else {
     res.status(400).send("invalid body");
     console.error(`invalid body: ${body.error.message}`);
