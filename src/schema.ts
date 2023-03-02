@@ -14,6 +14,7 @@ export const schema = `
     time       TEXT NOT NULL,
     message_id INTEGER NOT NULL,
     reply      TEXT NOT NULL,
+    likes      INTEGER DEFAULT 0,
     PRIMARY KEY(id AUTOINCREMENT)
   );
 `

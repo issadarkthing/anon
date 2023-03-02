@@ -56,6 +56,22 @@ app.post("/authenticate", limiter, (req, res) => {
   }
 });
 
+
+const likeLimiter = rateLimit({
+  windowMs: 30 * 60 * 1000, // 30 minutes
+  max: 50,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.post("/like/:id", likeLimiter, (req, res) => {
+  db
+    .prepare("UPDATE replies SET likes = likes + 1 WHERE id = ?")
+    .run([req.params.id]);
+
+  res.sendStatus(200);
+});
+
 app.get("/replies", (req, res) => {
   const result = db 
     .prepare(`SELECT 
@@ -63,6 +79,7 @@ app.get("/replies", (req, res) => {
         replies.time,
         replies.message_id,
         replies.reply,
+        replies.likes,
         messages.message
       FROM replies 
       INNER JOIN messages ON replies.message_id = messages.id
