@@ -135,6 +135,7 @@ app.get("/messages", protectedRoute, (req, res) => {
         messages.ip,
         messages.user_agent,
         replies.reply,
+        replies.likes,
         replies.time AS reply_time,
         messages.time AS message_time
       FROM messages 
