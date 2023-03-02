@@ -64,6 +64,14 @@ const likeLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+app.post("/unlike/:id", likeLimiter, (req, res) => {
+  db
+    .prepare("UPDATE replies SET likes = likes - 1 WHERE id = ?")
+    .run([req.params.id]);
+
+  res.sendStatus(200);
+});
+
 app.post("/like/:id", likeLimiter, (req, res) => {
   db
     .prepare("UPDATE replies SET likes = likes + 1 WHERE id = ?")
