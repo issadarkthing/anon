@@ -22,7 +22,6 @@ export const schema = `
     id         INTEGER NOT NULL UNIQUE,
     ip         TEXT,
     user_agent TEXT,
-    token      TEXT,
     username   TEXT NOT NULL,
     password   TEXT NOT NULL,
     time       TEXT NOT NULL,

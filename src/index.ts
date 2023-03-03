@@ -1,23 +1,15 @@
-import express, { NextFunction, Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import { config } from "dotenv";
-import bodyParser from "body-parser";
-import sqlite from "better-sqlite3";
 import rateLimit from "express-rate-limit";
-import { messageSchema, replySchema } from "./structure/Message";
-import { schema } from "./schema";
-import cors from "cors";
-import { Mail } from "./structure/Mail";
-import { signupSchema } from "./structure/SignUp";
+import { Message, messageSchema, Reply, replySchema } from "./structure/Message";
 import crypto from "crypto";
+import { hashPassword } from "./utils";
+import { User, userSchema } from "./structure/User";
+import { Client } from "./structure/Client";
 
 config();
 
-const mail = new Mail();
-
-const db = sqlite("main.db");
-db.pragma("journal_mode = WAL");
-
-db.exec(schema);
+export const client = new Client();
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -26,13 +18,7 @@ const limiter = rateLimit({
   legacyHeaders: false,
 });
 
-const app = express();
-const port = process.env.PORT;
 
-app.use(cors({
-  origin: "*",
-}))
-app.use(bodyParser.json());
 
 function protectedRoute(req: Request, res: Response, next: NextFunction) {
   const token = req.get("token");
@@ -45,9 +31,9 @@ function protectedRoute(req: Request, res: Response, next: NextFunction) {
   }
 }
 
-app.set("trust proxy", "loopback");
+client.app.set("trust proxy", "loopback");
 
-app.post("/authenticate", limiter, (req, res) => {
+client.app.post("/authenticate", limiter, (req, res) => {
   const token = req.get("token");
 
   if (token === process.env.TOKEN) {
@@ -66,30 +52,67 @@ const likeLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-app.post("/unlike/:id", likeLimiter, (req, res) => {
-  db
-    .prepare("UPDATE replies SET likes = likes - 1 WHERE id = ?")
-    .run([req.params.id]);
+client.app.post("/unlike/:id", likeLimiter, (req, res) => {
+  client
+    .dbRun(
+      "UPDATE replies SET likes = likes - 1 WHERE id = ?",
+      [req.params.id],
+    );
 
   res.sendStatus(200);
 });
 
-app.post("/like/:id", likeLimiter, (req, res) => {
-  db
-    .prepare("UPDATE replies SET likes = likes + 1 WHERE id = ?")
-    .run([req.params.id]);
+client.app.post("/like/:id", likeLimiter, (req, res) => {
+  client
+    .dbRun(
+      "UPDATE replies SET likes = likes + 1 WHERE id = ?",
+      [req.params.id],
+    );
 
   res.sendStatus(200);
 });
 
-app.post("/signup", limiter, (req, res) => {
-  const body = signupSchema.safeParse(req.body);
+client.app.post("/login", limiter, (req, res) => {
+  const body = userSchema.safeParse(req.body);
+   
+  if (body.success) {
+    const data = body.data;
+    const result = client.dbGet<User>(
+      "SELECT * FROM users WHERE username = ?",
+      data.username,
+    );
+
+    if (!result) {
+      res.status(403).send("user not found");
+      return;
+    }
+
+    const hashedPassword = hashPassword(data.password);
+
+    if (hashedPassword !== result.password) {
+      res.status(401).send("unauthorized");
+      return;
+    }
+
+    const tokenData = `${process.env.MASTER_SALT}:${data.username}:${data.password}`;
+    const token = hashPassword(tokenData);
+    res.send({ token });
+
+  } else {
+    res.status(400).send("invalid body");
+    console.error(`invalid body: ${body.error.message}`);
+  }
+});
+
+client.app.post("/signup", limiter, (req, res) => {
+  const body = userSchema.safeParse(req.body);
 
   if (body.success) {
     const data = body.data;
-    const result = db
-      .prepare("SELECT * FROM users WHERE username = ?")
-      .get(data.username);
+    const result = client.dbGet<User>(
+      "SELECT * FROM users WHERE username = ?",
+      data.username,
+    );
 
     if (result) {
       res.status(400).send("username already taken");
@@ -103,15 +126,10 @@ app.post("/signup", limiter, (req, res) => {
     const hash = crypto.createHash("sha256");
     const hashedPassword = hash.update(data.password).digest("hex");
 
-    db
-      .prepare("INSERT INTO users (ip, user_agent, username, password, time) VALUES (?, ?, ?, ?, ?)")
-      .run([
-        ip,
-        userAgent,
-        data.username,
-        hashedPassword,
-        date,
-      ]);
+    client.dbRun(
+      "INSERT INTO users (ip, user_agent, username, password, time) VALUES (?, ?, ?, ?, ?)",
+      [ip, userAgent, data.username, hashedPassword, date],
+    );
 
     res.sendStatus(200);
   } else {
@@ -120,9 +138,9 @@ app.post("/signup", limiter, (req, res) => {
   }
 });
 
-app.get("/replies", (req, res) => {
-  const result = db 
-    .prepare(`SELECT 
+client.app.get("/replies", (req, res) => {
+    const result = client.dbAll(
+      `SELECT 
         replies.id, 
         replies.time,
         replies.message_id,
@@ -131,14 +149,15 @@ app.get("/replies", (req, res) => {
         messages.message
       FROM replies 
       INNER JOIN messages ON replies.message_id = messages.id
-      `) 
-    .all();
+      `
+    ) || [];
+
 
   result.reverse();
   res.send(JSON.stringify(result));
 })
 
-app.post("/reply/:id", limiter, protectedRoute, (req, res) => {
+client.app.post("/reply/:id", limiter, protectedRoute, (req, res) => {
   const body = replySchema.safeParse(req.body);
 
   if (!body.success) {
@@ -150,9 +169,10 @@ app.post("/reply/:id", limiter, protectedRoute, (req, res) => {
   const data = body.data;
   const messageId = req.params["id"];
 
-  const message = db
-    .prepare("SELECT * FROM messages WHERE id = ?")
-    .get(messageId);
+  const message = client.dbGet<Message>(
+    "SELECT * FROM messages WHERE id = ?",
+    messageId,
+  );
 
   if (!message) {
     res.status(404).send(`cannot find message "${messageId}"`);
@@ -160,16 +180,17 @@ app.post("/reply/:id", limiter, protectedRoute, (req, res) => {
     return;
   }
 
-  db
-    .prepare("INSERT INTO replies (time, message_id, reply) VALUES (?, ?, ?)")
-    .run([(new Date()).toISOString(), messageId, data.reply]);
+  client.dbRun(
+    "INSERT INTO replies (time, message_id, reply) VALUES (?, ?, ?)",
+    [(new Date()).toISOString(), messageId, data.reply],
+  );
 
   res.sendStatus(200);
 });
 
-app.get("/messages", protectedRoute, (req, res) => {
-  const result = db
-    .prepare(`SELECT 
+client.app.get("/messages", protectedRoute, (req, res) => {
+  const result = client.dbAll(
+    ` SELECT 
         messages.id,
         messages.message,
         messages.ip,
@@ -179,14 +200,14 @@ app.get("/messages", protectedRoute, (req, res) => {
         replies.time AS reply_time,
         messages.time AS message_time
       FROM messages 
-      FULL OUTER JOIN replies ON messages.id = replies.message_id`)
-    .all();
+      FULL OUTER JOIN replies ON messages.id = replies.message_id`
+  ) || [];
 
   result.reverse();
   res.send(JSON.stringify(result));
 })
 
-app.post("/message", limiter, (req, res) => {
+client.app.post("/message", limiter, (req, res) => {
   const body = messageSchema.safeParse(req.body);
 
   if (body.success) {
@@ -196,14 +217,16 @@ app.post("/message", limiter, (req, res) => {
     const now = (new Date());
     const date = now.toISOString();
 
-    db
-      .prepare("INSERT INTO messages (ip, user_agent, time, message) VALUES (?, ?, ?, ?)")
-      .run([ip, userAgent, date, data.message]);
+    client.db
+    client.dbRun(
+      "INSERT INTO messages (ip, user_agent, time, message) VALUES (?, ?, ?, ?)",
+      [ip, userAgent, date, data.message],
+    );
 
     res.send(JSON.stringify(body.data));
 
     if (process.env.ENV !== "DEV") {
-      mail.sendMail({
+      client.mail.sendMail({
         subject: "Someone sent you a message on anon.issadarkthing.com",
         text: `Message:\n${body.data.message}`,
         html: `ip: ${ip}<br>user agent: ${userAgent}<br>message: ${body.data.message}<br>datetime: ${now}`,
@@ -217,6 +240,5 @@ app.post("/message", limiter, (req, res) => {
   }
 });
 
-app.listen(port, () => {
-  console.log(`Listening to port ${port}`);
-});
+
+client.start();
