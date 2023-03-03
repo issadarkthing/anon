@@ -7,6 +7,8 @@ import { messageSchema, replySchema } from "./structure/Message";
 import { schema } from "./schema";
 import cors from "cors";
 import { Mail } from "./structure/Mail";
+import { signupSchema } from "./structure/SignUp";
+import crypto from "crypto";
 
 config();
 
@@ -78,6 +80,44 @@ app.post("/like/:id", likeLimiter, (req, res) => {
     .run([req.params.id]);
 
   res.sendStatus(200);
+});
+
+app.post("/signup", limiter, (req, res) => {
+  const body = signupSchema.safeParse(req.body);
+
+  if (body.success) {
+    const data = body.data;
+    const result = db
+      .prepare("SELECT * FROM users WHERE username = ?")
+      .get(data.username);
+
+    if (result) {
+      res.status(400).send("username already taken");
+      return;
+    }
+
+    const ip = req.get("X-Real-IP") || req.ip;
+    const userAgent = req.get("User-Agent");
+    const now = (new Date());
+    const date = now.toISOString();
+    const hash = crypto.createHash("sha256");
+    const hashedPassword = hash.update(data.password).digest("hex");
+
+    db
+      .prepare("INSERT INTO users (ip, user_agent, username, password, time) VALUES (?, ?, ?, ?, ?)")
+      .run([
+        ip,
+        userAgent,
+        data.username,
+        hashedPassword,
+        date,
+      ]);
+
+    res.sendStatus(200);
+  } else {
+    res.status(400).send("invalid body");
+    console.error(`invalid body: ${body.error.message}`);
+  }
 });
 
 app.get("/replies", (req, res) => {

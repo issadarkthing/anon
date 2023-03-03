@@ -17,4 +17,15 @@ export const schema = `
     likes      INTEGER DEFAULT 0,
     PRIMARY KEY(id AUTOINCREMENT)
   );
+
+  CREATE TABLE IF NOT EXISTS users (
+    id         INTEGER NOT NULL UNIQUE,
+    ip         TEXT,
+    user_agent TEXT,
+    token      TEXT,
+    username   TEXT NOT NULL,
+    password   TEXT NOT NULL,
+    time       TEXT NOT NULL,
+    PRIMARY KEY(id AUTOINCREMENT)
+  );
 `
