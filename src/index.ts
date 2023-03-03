@@ -53,21 +53,19 @@ const likeLimiter = rateLimit({
 });
 
 client.app.post("/unlike/:id", likeLimiter, (req, res) => {
-  client
-    .dbRun(
-      "UPDATE replies SET likes = likes - 1 WHERE id = ?",
-      [req.params.id],
-    );
+  client.dbRun(
+    "UPDATE replies SET likes = likes - 1 WHERE id = ?",
+    req.params.id,
+  );
 
   res.sendStatus(200);
 });
 
 client.app.post("/like/:id", likeLimiter, (req, res) => {
-  client
-    .dbRun(
-      "UPDATE replies SET likes = likes + 1 WHERE id = ?",
-      [req.params.id],
-    );
+  client.dbRun(
+    "UPDATE replies SET likes = likes + 1 WHERE id = ?",
+    req.params.id,
+  );
 
   res.sendStatus(200);
 });
@@ -128,8 +126,9 @@ client.app.post("/signup", limiter, (req, res) => {
 
     client.dbRun(
       "INSERT INTO users (ip, user_agent, username, password, time) VALUES (?, ?, ?, ?, ?)",
-      [ip, userAgent, data.username, hashedPassword, date],
+      ip, userAgent, data.username, hashedPassword, date,
     );
+
 
     res.sendStatus(200);
   } else {
@@ -220,7 +219,7 @@ client.app.post("/message", limiter, (req, res) => {
     client.db
     client.dbRun(
       "INSERT INTO messages (ip, user_agent, time, message) VALUES (?, ?, ?, ?)",
-      [ip, userAgent, date, data.message],
+      ip, userAgent, date, data.message,
     );
 
     res.send(JSON.stringify(body.data));
