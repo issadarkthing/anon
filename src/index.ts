@@ -162,11 +162,14 @@ app.post("/message", limiter, (req, res) => {
 
     res.send(JSON.stringify(body.data));
 
-    mail.sendMail({
-      subject: "Someone sent you a message on anon.issadarkthing.com",
-      text: `Message:\n${body.data.message}`,
-      html: `ip: ${ip}<br>user agent: ${userAgent}<br>message: ${body.data.message}<br>datetime: ${now}`,
-    });
+    if (process.env.ENV !== "DEV") {
+      mail.sendMail({
+        subject: "Someone sent you a message on anon.issadarkthing.com",
+        text: `Message:\n${body.data.message}`,
+        html: `ip: ${ip}<br>user agent: ${userAgent}<br>message: ${body.data.message}<br>datetime: ${now}`,
+      });
+    }
+
 
   } else {
     res.status(400).send("invalid body");
