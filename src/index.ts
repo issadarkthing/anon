@@ -206,7 +206,24 @@ client.app.get("/messages", protectedRoute, (req, res) => {
   res.send(JSON.stringify(result));
 })
 
-client.app.post("/message", limiter, (req, res) => {
+client.app.post("/message/:id", limiter, (req, res) => {
+  const userId = req.params["id"];
+
+  if (!userId) {
+    res.status(400).send("missing user id");
+    return;
+  }
+
+  const user = client.dbGet<User>(
+    "SELECT * FROM users WHERE id = ?",
+    userId,
+  );
+
+  if (!user) {
+    res.status(403).send("user not found");
+    return;
+  }
+
   const body = messageSchema.safeParse(req.body);
 
   if (body.success) {
@@ -218,8 +235,8 @@ client.app.post("/message", limiter, (req, res) => {
 
     client.db
     client.dbRun(
-      "INSERT INTO messages (ip, user_agent, time, message) VALUES (?, ?, ?, ?)",
-      ip, userAgent, date, data.message,
+      "INSERT INTO messages (user_id, ip, user_agent, time, message) VALUES (?, ?, ?, ?, ?)",
+      userId, ip, userAgent, date, data.message,
     );
 
     res.send(JSON.stringify(body.data));

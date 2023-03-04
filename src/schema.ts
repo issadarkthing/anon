@@ -2,6 +2,7 @@
 export const schema = `
   CREATE TABLE IF NOT EXISTS messages (
     id         INTEGER NOT NULL UNIQUE,
+    user_id    INTEGER NOT NULL,
     ip         TEXT,
     user_agent TEXT,
     time       TEXT NOT NULL,
