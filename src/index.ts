@@ -3,7 +3,7 @@ import { config } from "dotenv";
 import rateLimit from "express-rate-limit";
 import { Message, messageSchema, replySchema } from "./structure/Message";
 import crypto from "crypto";
-import { hashPassword, createToken, asyncHandler } from "./utils";
+import { hashPassword, createToken } from "./utils";
 import { User, userSchema } from "./structure/User";
 import { Client } from "./structure/Client";
 
@@ -44,7 +44,7 @@ function protectedRoute(req: Request, res: Response, next: NextFunction) {
     res.status(404).send("user not found");
     return;
   }
-
+  
   const generatedToken = createToken(user.username, user.password);
 
   if (generatedToken !== token) {
@@ -179,32 +179,44 @@ client.app.get("/replies", (req, res) => {
   res.send(JSON.stringify(result));
 })
 
-client.app.post("/reply/:id", limiter, protectedRoute, (req, res) => {
+client.app.post("/reply/:userId/:messageId", limiter, protectedRoute, (req, res) => {
   const body = replySchema.safeParse(req.body);
 
   if (!body.success) {
     res.status(400).send("invalid body");
-    console.error(`invalid body: ${body.error.message}`);
     return;
   }
 
   const data = body.data;
-  const messageId = req.params["id"];
+  const messageId = req.params["messageId"];
+  const userId = req.params["userId"];
 
   const message = client.dbGet<Message>(
-    "SELECT * FROM messages WHERE id = ?",
+    "SELECT * FROM messages WHERE id = ? AND user_id = ?",
     messageId,
+    userId,
   );
 
   if (!message) {
     res.status(404).send(`cannot find message "${messageId}"`);
-    console.error(`no data: cannot find message "${messageId}"`);
+    return;
+  }
+
+  const reply = client.dbGet(
+    `SELECT * FROM replies WHERE message_id = ?`,
+    messageId,
+  );
+
+  if (reply) {
+    res.status(400).send("you already responded to this message");
     return;
   }
 
   client.dbRun(
     "INSERT INTO replies (time, message_id, reply) VALUES (?, ?, ?)",
-    [(new Date()).toISOString(), messageId, data.reply],
+    (new Date()).toISOString(), 
+    messageId, 
+    data.reply,
   );
 
   res.sendStatus(200);
