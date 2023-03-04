@@ -1,5 +1,5 @@
 import { Mail } from "./Mail";
-import sqlite, { Database, Statement } from "better-sqlite3";
+import sqlite, { Database } from "better-sqlite3";
 import { schema } from "../schema";
 import express, { Express } from "express";
 import cors from "cors";
@@ -34,7 +34,7 @@ export class Client {
     return this.db.prepare(query).get(values);
   }
 
-  dbAll<T>(query: string, ...values: any[]): T[] | undefined {
+  dbAll<T>(query: string, ...values: any[]): T[] {
     return this.db.prepare(query).all(values);
   }
 

@@ -85,67 +85,66 @@ client.app.post("/like/:id", likeLimiter, (req, res) => {
 client.app.post("/login", limiter, (req, res) => {
   const body = userSchema.safeParse(req.body);
    
-  if (body.success) {
-    const data = body.data;
-    const result = client.dbGet<User>(
-      "SELECT * FROM users WHERE username = ?",
-      data.username,
-    );
-
-    if (!result) {
-      res.status(403).send("user not found");
-      return;
-    }
-
-    const hashedPassword = hashPassword(data.password);
-
-    if (hashedPassword !== result.password) {
-      res.status(401).send("unauthorized");
-      return;
-    }
-
-    const token = createToken(data.username, hashedPassword);
-    res.send({ token });
-
-  } else {
+  if (!body.success) {
     res.status(400).send("invalid body");
-    console.error(`invalid body: ${body.error.message}`);
+    return;
   }
+
+  const data = body.data;
+  const result = client.dbGet<User>(
+    "SELECT * FROM users WHERE username = ?",
+    data.username,
+  );
+
+  if (!result) {
+    res.status(403).send("user not found");
+    return;
+  }
+
+  const hashedPassword = hashPassword(data.password);
+
+  if (hashedPassword !== result.password) {
+    res.status(401).send("unauthorized");
+    return;
+  }
+
+  const token = createToken(data.username, hashedPassword);
+  res.send({ token });
 });
 
 client.app.post("/signup", limiter, (req, res) => {
   const body = userSchema.safeParse(req.body);
 
-  if (body.success) {
-    const data = body.data;
-    const result = client.dbGet<User>(
-      "SELECT * FROM users WHERE username = ?",
-      data.username,
-    );
-
-    if (result) {
-      res.status(400).send("username already taken");
-      return;
-    }
-
-    const ip = req.get("X-Real-IP") || req.ip;
-    const userAgent = req.get("User-Agent");
-    const now = (new Date());
-    const date = now.toISOString();
-    const hash = crypto.createHash("sha256");
-    const hashedPassword = hash.update(data.password).digest("hex");
-
-    client.dbRun(
-      "INSERT INTO users (ip, user_agent, username, password, time) VALUES (?, ?, ?, ?, ?)",
-      ip, userAgent, data.username, hashedPassword, date,
-    );
-
-
-    res.sendStatus(200);
-  } else {
+  if (!body.success) {
     res.status(400).send("invalid body");
-    console.error(`invalid body: ${body.error.message}`);
+    return;
   }
+
+  const data = body.data;
+  const result = client.dbGet<User>(
+    "SELECT * FROM users WHERE username = ?",
+    data.username,
+  );
+
+  if (result) {
+    res.status(400).send("username already taken");
+    return;
+  }
+
+  const ip = req.get("X-Real-IP") || req.ip;
+  const userAgent = req.get("User-Agent");
+  const now = (new Date());
+  const date = now.toISOString();
+  const hash = crypto.createHash("sha256");
+  const hashedPassword = hash.update(data.password).digest("hex");
+
+  client.dbRun(
+    "INSERT INTO users (ip, user_agent, username, password, time) VALUES (?, ?, ?, ?, ?)",
+    ip, userAgent, data.username, hashedPassword, date,
+  );
+
+
+  res.sendStatus(200);
 });
 
 client.app.get("/replies/:userId", (req, res) => {
@@ -170,7 +169,7 @@ client.app.get("/replies/:userId", (req, res) => {
       WHERE messages.user_id = ?
       `,
     userId,
-  ) || [];
+  );
 
 
   result.reverse();
@@ -248,7 +247,7 @@ client.app.get("/messages/:userId", protectedRoute, (req, res) => {
       WHERE messages.user_id = ?
     `,
     userId,
-  ) || [];
+  );
 
   result.reverse();
   res.send(JSON.stringify(result));
@@ -274,34 +273,33 @@ client.app.post("/message/:id", limiter, (req, res) => {
 
   const body = messageSchema.safeParse(req.body);
 
-  if (body.success) {
-    const data = body.data;
-    const ip = req.get("X-Real-IP");
-    const userAgent = req.get("User-Agent");
-    const now = (new Date());
-    const date = now.toISOString();
-
-    client.db
-    client.dbRun(
-      "INSERT INTO messages (user_id, ip, user_agent, time, message) VALUES (?, ?, ?, ?, ?)",
-      userId, ip, userAgent, date, data.message,
-    );
-
-    res.send(JSON.stringify(body.data));
-
-    if (process.env.ENV !== "DEV") {
-      client.mail.sendMail({
-        subject: "Someone sent you a message on anon.issadarkthing.com",
-        text: `Message:\n${body.data.message}`,
-        html: `ip: ${ip}<br>user agent: ${userAgent}<br>message: ${body.data.message}<br>datetime: ${now}`,
-      });
-    }
-
-
-  } else {
+  if (!body.success) {
     res.status(400).send("invalid body");
-    console.error(`invalid body: ${body.error.message}`);
+    return;
   }
+
+  const data = body.data;
+  const ip = req.get("X-Real-IP");
+  const userAgent = req.get("User-Agent");
+  const now = (new Date());
+  const date = now.toISOString();
+
+  client.db
+  client.dbRun(
+    "INSERT INTO messages (user_id, ip, user_agent, time, message) VALUES (?, ?, ?, ?, ?)",
+    userId, ip, userAgent, date, data.message,
+  );
+
+  res.send(JSON.stringify(body.data));
+
+  if (process.env.ENV !== "DEV") {
+    client.mail.sendMail({
+      subject: "Someone sent you a message on anon.issadarkthing.com",
+      text: `Message:\n${body.data.message}`,
+      html: `ip: ${ip}<br>user agent: ${userAgent}<br>message: ${body.data.message}<br>datetime: ${now}`,
+    });
+  }
+
 });
 
 
