@@ -160,9 +160,17 @@ client.app.post("/signup", limiter, (req, res) => {
   }
 });
 
-client.app.get("/replies", (req, res) => {
-    const result = client.dbAll(
-      `SELECT 
+client.app.get("/replies/:userId", (req, res) => {
+  const userId = req.params["userId"];
+  const user = client.dbGet("SELECT * FROM users WHERE id = ?", userId);
+
+  if (!user) {
+    res.status(404).send("user not found");
+    return;
+  }
+
+  const result = client.dbAll(
+    `SELECT 
         replies.id, 
         replies.time,
         replies.message_id,
@@ -171,8 +179,10 @@ client.app.get("/replies", (req, res) => {
         messages.message
       FROM replies 
       INNER JOIN messages ON replies.message_id = messages.id
-      `
-    ) || [];
+      WHERE messages.user_id = ?
+      `,
+    userId,
+  ) || [];
 
 
   result.reverse();
