@@ -198,7 +198,7 @@ client.app.post("/reply/:userId/:messageId", limiter, protectedRoute, (req, res)
   );
 
   if (!message) {
-    res.status(404).send(`cannot find message "${messageId}"`);
+    res.status(404).send("cannot find message");
     return;
   }
 
