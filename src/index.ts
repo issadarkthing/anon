@@ -57,18 +57,6 @@ function protectedRoute(req: Request, res: Response, next: NextFunction) {
 
 client.app.set("trust proxy", "loopback");
 
-client.app.post("/authenticate", limiter, (req, res) => {
-  const token = req.get("token");
-
-  if (token === process.env.TOKEN) {
-    res.sendStatus(200);
-  } else {
-    res.status(401).send("unauthorized");
-    console.error(`unauthorized: ${req.ip} trying to access protected route`);
-  }
-});
-
-
 const likeLimiter = rateLimit({
   windowMs: 30 * 60 * 1000, // 30 minutes
   max: 50,
