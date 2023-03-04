@@ -1,9 +1,9 @@
 import { NextFunction, Request, Response } from "express";
 import { config } from "dotenv";
 import rateLimit from "express-rate-limit";
-import { Message, messageSchema, Reply, replySchema } from "./structure/Message";
+import { Message, messageSchema, replySchema } from "./structure/Message";
 import crypto from "crypto";
-import { hashPassword } from "./utils";
+import { hashPassword, createToken, asyncHandler } from "./utils";
 import { User, userSchema } from "./structure/User";
 import { Client } from "./structure/Client";
 
@@ -23,13 +23,37 @@ const limiter = rateLimit({
 function protectedRoute(req: Request, res: Response, next: NextFunction) {
   const token = req.get("token");
 
-  if (token === process.env.TOKEN) {
-    next();
-  } else {
-    res.status(401).send("unauthorized");
-    console.error(`unauthorized: ${req.ip} trying to access protected route`);
+  if (!token) {
+    res.status(400).send("no token");
+    return;
   }
-}
+
+  const userId = req.params["userId"];
+
+  if (!userId) {
+    res.status(400).send("no user id");
+    return;
+  }
+
+  const user = client.dbGet<User>(
+    `SELECT * FROM users WHERE id = ?`,
+    userId,
+  );
+
+  if (!user) {
+    res.status(404).send("user not found");
+    return;
+  }
+
+  const generatedToken = createToken(user.username, user.password);
+
+  if (generatedToken !== token) {
+    res.status(403).send("invalid token");
+    return;
+  }
+
+  next();
+};
 
 client.app.set("trust proxy", "loopback");
 
@@ -92,8 +116,7 @@ client.app.post("/login", limiter, (req, res) => {
       return;
     }
 
-    const tokenData = `${process.env.MASTER_SALT}:${data.username}:${data.password}`;
-    const token = hashPassword(tokenData);
+    const token = createToken(data.username, hashedPassword);
     res.send({ token });
 
   } else {
@@ -187,7 +210,19 @@ client.app.post("/reply/:id", limiter, protectedRoute, (req, res) => {
   res.sendStatus(200);
 });
 
-client.app.get("/messages", protectedRoute, (req, res) => {
+client.app.get("/messages/:userId", protectedRoute, (req, res) => {
+  const userId = req.params["userId"];
+
+  const user = client.dbGet<User>(
+    "SELECT * FROM users WHERE id = ?",
+    userId,
+  );
+
+  if (!user) {
+    res.status(403).send("user not found");
+    return;
+  }
+
   const result = client.dbAll(
     ` SELECT 
         messages.id,
@@ -199,7 +234,10 @@ client.app.get("/messages", protectedRoute, (req, res) => {
         replies.time AS reply_time,
         messages.time AS message_time
       FROM messages 
-      FULL OUTER JOIN replies ON messages.id = replies.message_id`
+      FULL OUTER JOIN replies ON messages.id = replies.message_id
+      WHERE messages.user_id = ?
+    `,
+    userId,
   ) || [];
 
   result.reverse();
