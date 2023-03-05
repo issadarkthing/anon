@@ -1,10 +1,10 @@
 import { NextFunction, Request, Response } from "express";
 import { config } from "dotenv";
 import rateLimit from "express-rate-limit";
-import { Message, messageSchema, replySchema } from "./structure/Message";
+import { MessageBody, messageBodySchema, replyBodySchema } from "./structure/Message";
 import crypto from "crypto";
 import { hashPassword, createToken } from "./utils";
-import { User, userSchema } from "./structure/User";
+import { User, UserBody, userBodySchema } from "./structure/User";
 import { Client } from "./structure/Client";
 
 config();
@@ -28,16 +28,16 @@ function protectedRoute(req: Request, res: Response, next: NextFunction) {
     return;
   }
 
-  const userId = req.params["userId"];
+  const username = req.params["username"];
 
-  if (!userId) {
+  if (!username) {
     res.status(400).send("no user id");
     return;
   }
 
-  const user = client.dbGet<User>(
-    `SELECT * FROM users WHERE id = ?`,
-    userId,
+  const user = client.dbGet<UserBody>(
+    `SELECT * FROM users WHERE username = ?`,
+    username,
   );
 
   if (!user) {
@@ -83,7 +83,7 @@ client.app.post("/like/:id", likeLimiter, (req, res) => {
 });
 
 client.app.post("/login", limiter, (req, res) => {
-  const body = userSchema.safeParse(req.body);
+  const body = userBodySchema.safeParse(req.body);
    
   if (!body.success) {
     res.status(400).send("invalid body");
@@ -91,7 +91,7 @@ client.app.post("/login", limiter, (req, res) => {
   }
 
   const data = body.data;
-  const result = client.dbGet<User>(
+  const result = client.dbGet<UserBody>(
     "SELECT * FROM users WHERE username = ?",
     data.username,
   );
@@ -113,7 +113,7 @@ client.app.post("/login", limiter, (req, res) => {
 });
 
 client.app.post("/signup", limiter, (req, res) => {
-  const body = userSchema.safeParse(req.body);
+  const body = userBodySchema.safeParse(req.body);
 
   if (!body.success) {
     res.status(400).send("invalid body");
@@ -121,7 +121,7 @@ client.app.post("/signup", limiter, (req, res) => {
   }
 
   const data = body.data;
-  const result = client.dbGet<User>(
+  const result = client.dbGet<UserBody>(
     "SELECT * FROM users WHERE username = ?",
     data.username,
   );
@@ -147,9 +147,9 @@ client.app.post("/signup", limiter, (req, res) => {
   res.sendStatus(200);
 });
 
-client.app.get("/replies/:userId", (req, res) => {
-  const userId = req.params["userId"];
-  const user = client.dbGet("SELECT * FROM users WHERE id = ?", userId);
+client.app.get("/replies/:username", (req, res) => {
+  const username = req.params["username"];
+  const user = client.dbGet<User>("SELECT * FROM users WHERE username = ?", username);
 
   if (!user) {
     res.status(404).send("user not found");
@@ -168,7 +168,7 @@ client.app.get("/replies/:userId", (req, res) => {
       INNER JOIN messages ON replies.message_id = messages.id
       WHERE messages.user_id = ?
       `,
-    userId,
+    user.id,
   );
 
 
@@ -176,8 +176,8 @@ client.app.get("/replies/:userId", (req, res) => {
   res.send(JSON.stringify(result));
 })
 
-client.app.post("/reply/:userId/:messageId", limiter, protectedRoute, (req, res) => {
-  const body = replySchema.safeParse(req.body);
+client.app.post("/reply/:username/:messageId", limiter, protectedRoute, (req, res) => {
+  const body = replyBodySchema.safeParse(req.body);
 
   if (!body.success) {
     res.status(400).send("invalid body");
@@ -186,12 +186,14 @@ client.app.post("/reply/:userId/:messageId", limiter, protectedRoute, (req, res)
 
   const data = body.data;
   const messageId = req.params["messageId"];
-  const userId = req.params["userId"];
+  const username = req.params["username"];
 
-  const message = client.dbGet<Message>(
-    "SELECT * FROM messages WHERE id = ? AND user_id = ?",
+  const message = client.dbGet<MessageBody>(
+    `SELECT * FROM messages 
+     INNER JOIN users ON messages.user_id = users.id
+     WHERE messages.id = ? AND users.username = ?`,
     messageId,
-    userId,
+    username,
   );
 
   if (!message) {
@@ -219,12 +221,12 @@ client.app.post("/reply/:userId/:messageId", limiter, protectedRoute, (req, res)
   res.sendStatus(200);
 });
 
-client.app.get("/messages/:userId", protectedRoute, (req, res) => {
-  const userId = req.params["userId"];
+client.app.get("/messages/:username", protectedRoute, (req, res) => {
+  const username = req.params["username"];
 
   const user = client.dbGet<User>(
-    "SELECT * FROM users WHERE id = ?",
-    userId,
+    "SELECT * FROM users WHERE username = ?",
+    username,
   );
 
   if (!user) {
@@ -244,26 +246,27 @@ client.app.get("/messages/:userId", protectedRoute, (req, res) => {
         messages.time AS message_time
       FROM messages 
       FULL OUTER JOIN replies ON messages.id = replies.message_id
-      WHERE messages.user_id = ?
+      INNER JOIN users ON messages.user_id = users.id
+      WHERE users.username = ?
     `,
-    userId,
+    username,
   );
 
   result.reverse();
   res.send(JSON.stringify(result));
 })
 
-client.app.post("/message/:id", limiter, (req, res) => {
-  const userId = req.params["id"];
+client.app.post("/message/:username", limiter, (req, res) => {
+  const username = req.params["username"];
 
-  if (!userId) {
+  if (!username) {
     res.status(400).send("missing user id");
     return;
   }
 
   const user = client.dbGet<User>(
-    "SELECT * FROM users WHERE id = ?",
-    userId,
+    "SELECT * FROM users WHERE username = ?",
+    username,
   );
 
   if (!user) {
@@ -271,7 +274,7 @@ client.app.post("/message/:id", limiter, (req, res) => {
     return;
   }
 
-  const body = messageSchema.safeParse(req.body);
+  const body = messageBodySchema.safeParse(req.body);
 
   if (!body.success) {
     res.status(400).send("invalid body");
@@ -287,7 +290,7 @@ client.app.post("/message/:id", limiter, (req, res) => {
   client.db
   client.dbRun(
     "INSERT INTO messages (user_id, ip, user_agent, time, message) VALUES (?, ?, ?, ?, ?)",
-    userId, ip, userAgent, date, data.message,
+    user.id, ip, userAgent, date, data.message,
   );
 
   res.send(JSON.stringify(body.data));
