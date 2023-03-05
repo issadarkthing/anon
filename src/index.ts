@@ -1,10 +1,19 @@
 import { NextFunction, Request, Response } from "express";
 import { config } from "dotenv";
 import rateLimit from "express-rate-limit";
-import { MessageBody, messageBodySchema, replyBodySchema } from "./structure/Message";
+import { 
+  MessageBody, 
+  messageBodySchema, 
+  replyBodySchema,
+} from "./structure/Message";
 import crypto from "crypto";
 import { hashPassword, createToken } from "./utils";
-import { User, UserBody, userBodySchema } from "./structure/User";
+import { 
+  User, 
+  UserBody, 
+  userBodySchema, 
+  userUpdateBodySchema,
+} from "./structure/User";
 import { Client } from "./structure/Client";
 
 config();
@@ -62,6 +71,10 @@ const likeLimiter = rateLimit({
   max: 50,
   standardHeaders: true,
   legacyHeaders: false,
+});
+
+client.app.get("/authenticate/:username", protectedRoute, (req, res) => {
+  res.sendStatus(200);
 });
 
 client.app.post("/unlike/:id", likeLimiter, (req, res) => {
@@ -145,6 +158,81 @@ client.app.post("/signup", limiter, (req, res) => {
 
 
   res.sendStatus(200);
+});
+
+client.app.patch("/user/:username", limiter, protectedRoute, (req, res) => {
+  const username = req.params["username"];
+  let user = client.dbGet<User>(`
+    SELECT username, time, description, profile_image
+    FROM users 
+    WHERE username = ?`, 
+    username,
+  );
+ 
+  if (!user) {
+    res.status(404).send("user not found");
+    return;
+  }
+
+  const body = userUpdateBodySchema.safeParse(req.body);
+
+  if (!body.success) {
+    res.status(400).send("invalid body");
+    return;
+  }
+
+  const data = body.data;
+
+  if (data.username) {
+    client.dbRun(
+      `
+      UPDATE users
+      SET username = ?
+      WHERE username = ?
+      `,
+      data.username,
+      username,
+    );
+  }
+
+  if (data.description) {
+    client.dbRun(
+      `
+      UPDATE users
+      SET description = ?
+      WHERE username = ?
+      `,
+      data.description,
+      username,
+    );
+  }
+
+  
+  user = client.dbGet<User>(`
+    SELECT username, time, description, profile_image
+    FROM users 
+    WHERE username = ?`, 
+    username,
+  );
+
+  res.send(user);
+});
+
+client.app.get("/user/:username", limiter, (req, res) => {
+  const username = req.params["username"];
+  const user = client.dbGet<User>(`
+    SELECT username, time, description, profile_image
+    FROM users 
+    WHERE username = ?`, 
+    username,
+  );
+ 
+  if (!user) {
+    res.status(404).send("user not found");
+    return;
+  }
+
+  res.send(user);
 });
 
 client.app.get("/:username/replies", (req, res) => {

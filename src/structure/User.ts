@@ -2,6 +2,7 @@ import { z } from "zod";
 
 const MAX_USERNAME = 50;
 const MAX_PASSWORD = 50;
+const MAX_DESCRIPTION = 100;
 
 export const userBodySchema = z.object({
   username: z.string().max(MAX_USERNAME),
@@ -18,3 +19,9 @@ export interface User {
   password: string;
   time: string;
 }
+
+export const userUpdateBodySchema = z.object({
+  username: z.string().max(MAX_USERNAME).optional(),
+  description: z.string().max(MAX_DESCRIPTION).optional(),
+})
+

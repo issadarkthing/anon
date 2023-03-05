@@ -20,12 +20,13 @@ export const schema = `
   );
 
   CREATE TABLE IF NOT EXISTS users (
-    id         INTEGER NOT NULL UNIQUE,
-    ip         TEXT,
-    user_agent TEXT,
-    username   TEXT NOT NULL,
-    password   TEXT NOT NULL,
-    time       TEXT NOT NULL,
+    id            INTEGER NOT NULL UNIQUE,
+    ip            TEXT,
+    user_agent    TEXT,
+    username      TEXT NOT NULL,
+    description   TEXT,
+    password      TEXT NOT NULL,
+    time          TEXT NOT NULL,
     PRIMARY KEY(id AUTOINCREMENT)
   );
 `
