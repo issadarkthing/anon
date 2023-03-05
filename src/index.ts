@@ -147,7 +147,7 @@ client.app.post("/signup", limiter, (req, res) => {
   res.sendStatus(200);
 });
 
-client.app.get("/replies/:username", (req, res) => {
+client.app.get("/:username/replies", (req, res) => {
   const username = req.params["username"];
   const user = client.dbGet<User>("SELECT * FROM users WHERE username = ?", username);
 
@@ -176,7 +176,7 @@ client.app.get("/replies/:username", (req, res) => {
   res.send(JSON.stringify(result));
 })
 
-client.app.post("/reply/:username/:messageId", limiter, protectedRoute, (req, res) => {
+client.app.post("/:username/reply/:messageId", limiter, protectedRoute, (req, res) => {
   const body = replyBodySchema.safeParse(req.body);
 
   if (!body.success) {
@@ -221,7 +221,7 @@ client.app.post("/reply/:username/:messageId", limiter, protectedRoute, (req, re
   res.sendStatus(200);
 });
 
-client.app.get("/messages/:username", protectedRoute, (req, res) => {
+client.app.get("/:username/messages", protectedRoute, (req, res) => {
   const username = req.params["username"];
 
   const user = client.dbGet<User>(
@@ -256,7 +256,7 @@ client.app.get("/messages/:username", protectedRoute, (req, res) => {
   res.send(JSON.stringify(result));
 })
 
-client.app.post("/message/:username", limiter, (req, res) => {
+client.app.post("/:username/message", limiter, (req, res) => {
   const username = req.params["username"];
 
   if (!username) {
