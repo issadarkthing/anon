@@ -6,8 +6,8 @@ export function hashPassword(password: string) {
   return hash.update(password).digest("hex");
 }
 
-export function createToken(username: string, password: string) {
-  const tokenData = `${process.env.MASTER_SALT}:${username}:${password}`;
+export function createToken(userId: number) {
+  const tokenData = `${userId}:${process.env.MASTER_SALT}`;
   return hashPassword(tokenData);
 }
 

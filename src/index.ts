@@ -104,7 +104,7 @@ client.app.post("/login", limiter, (req, res) => {
   }
 
   const data = body.data;
-  const result = client.dbGet<UserBody>(
+  const result = client.dbGet<User>(
     "SELECT * FROM users WHERE username = ?",
     data.username,
   );
@@ -121,7 +121,7 @@ client.app.post("/login", limiter, (req, res) => {
     return;
   }
 
-  const token = createToken(data.username, hashedPassword);
+  const token = createToken(result.id);
   res.send({ token });
 });
 
