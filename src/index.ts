@@ -125,7 +125,14 @@ client.app.post("/login", limiter, (req, res) => {
   res.send({ token });
 });
 
-client.app.post("/signup", limiter, (req, res) => {
+const signUpLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+client.app.post("/signup", signUpLimiter, (req, res) => {
   const body = userBodySchema.safeParse(req.body);
 
   if (!body.success) {
