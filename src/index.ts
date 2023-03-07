@@ -44,7 +44,7 @@ function protectedRoute(req: Request, res: Response, next: NextFunction) {
     return;
   }
 
-  const user = client.dbGet<UserBody>(
+  const user = client.dbGet<User>(
     `SELECT * FROM users WHERE username = ?`,
     username,
   );
@@ -54,7 +54,7 @@ function protectedRoute(req: Request, res: Response, next: NextFunction) {
     return;
   }
   
-  const generatedToken = createToken(user.username, user.password);
+  const generatedToken = createToken(user.id);
 
   if (generatedToken !== token) {
     res.status(403).send("invalid token");
