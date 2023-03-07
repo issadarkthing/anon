@@ -163,7 +163,7 @@ client.app.post("/signup", limiter, (req, res) => {
 client.app.patch("/user/:username", limiter, protectedRoute, (req, res) => {
   const username = req.params["username"];
   let user = client.dbGet<User>(`
-    SELECT username, time, description, profile_image
+    SELECT username, time, description
     FROM users 
     WHERE username = ?`, 
     username,
@@ -209,7 +209,7 @@ client.app.patch("/user/:username", limiter, protectedRoute, (req, res) => {
 
   
   user = client.dbGet<User>(`
-    SELECT username, time, description, profile_image
+    SELECT username, time, description
     FROM users 
     WHERE username = ?`, 
     username,
@@ -221,7 +221,7 @@ client.app.patch("/user/:username", limiter, protectedRoute, (req, res) => {
 client.app.get("/user/:username", limiter, (req, res) => {
   const username = req.params["username"];
   const user = client.dbGet<User>(`
-    SELECT username, time, description, profile_image
+    SELECT username, time, description
     FROM users 
     WHERE username = ?`, 
     username,
