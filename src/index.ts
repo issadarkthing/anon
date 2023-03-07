@@ -351,7 +351,14 @@ client.app.get("/:username/messages", protectedRoute, (req, res) => {
   res.send(JSON.stringify(result));
 })
 
-client.app.post("/:username/message", limiter, (req, res) => {
+const sendMessageLimiter = rateLimit({
+  windowMs: 45 * 60 * 1000, // 45 minutes
+  max: 50,
+  standardHeaders: true,
+  legacyHeaders: false,
+})
+
+client.app.post("/:username/message", sendMessageLimiter, (req, res) => {
   const username = req.params["username"];
 
   if (!username) {
