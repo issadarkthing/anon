@@ -7,7 +7,7 @@ import {
   replyBodySchema,
 } from "./structure/Message";
 import crypto from "crypto";
-import { hashPassword, createToken } from "./utils";
+import { hashPassword, createToken, isValidUsername } from "./utils";
 import { 
   User, 
   UserBody, 
@@ -141,6 +141,12 @@ client.app.post("/signup", signUpLimiter, (req, res) => {
   }
 
   const data = body.data;
+
+  if (!isValidUsername(data.username)) {
+    res.status(400).send("invalid username");
+    return;
+  }
+
   const result = client.dbGet<UserBody>(
     "SELECT * FROM users WHERE username = ?",
     data.username,
@@ -188,9 +194,16 @@ client.app.patch("/user/:username", limiter, protectedRoute, (req, res) => {
     return;
   }
 
+
   const data = body.data;
 
   if (data.username) {
+
+    if (!isValidUsername(data.username)) {
+      res.status(400).send("invalid username");
+      return;
+    }
+
     client.dbRun(
       `
       UPDATE users

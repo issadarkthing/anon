@@ -17,3 +17,7 @@ export function asyncHandler(fn: (req: Request, res: Response, next: NextFunctio
     return fn(req, res, next).catch(next);
   }
 }
+
+export function isValidUsername(str: string) {
+  return (/^[a-zA-Z0-9_-]*$/).test(str);
+}
