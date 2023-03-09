@@ -410,13 +410,13 @@ client.app.post("/:username/message", sendMessageLimiter, (req, res) => {
 
   res.send(JSON.stringify(body.data));
 
-  if (process.env.ENV !== "DEV") {
+  /* if (process.env.ENV !== "DEV") {
     client.mail.sendMail({
       subject: "Someone sent you a message on anon.issadarkthing.com",
       text: `Message:\n${body.data.message}`,
       html: `ip: ${ip}<br>user agent: ${userAgent}<br>message: ${body.data.message}<br>datetime: ${now}`,
     });
-  }
+  } */
 
 });
 
