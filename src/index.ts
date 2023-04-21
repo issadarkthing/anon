@@ -15,6 +15,7 @@ import {
   userUpdateBodySchema,
 } from "./structure/User";
 import { Client } from "./structure/Client";
+import fs from "fs";
 
 config();
 
@@ -436,12 +437,23 @@ client.app.post("/:username/message", sendMessageLimiter, (req, res) => {
 
   if (user.email) {
 
-    client.mail.sendMail({
-      to: user.email,
-      subject: "A message received on anonmi",
-      text: `Message:\n${body.data.message}`,
-      html: `ip: ${ip}<br>user agent: ${userAgent}<br>message: ${body.data.message}<br>datetime: ${now}`,
+    fs.readFile("email.html", { encoding: "utf-8" }, (err, content) => {
+      if (err) {
+        console.error(`error occured when reading file: ${err.message}`);
+        return;
+      }
+
+
+      const html = content.replace(/\$\{username\}/g, user.username);
+
+      client.mail.sendMail({
+        to: user.email,
+        subject: "A message received on anonmi",
+        text: `Message:\n${body.data.message}`,
+        html
+      });
     });
+
   }
 
 });
