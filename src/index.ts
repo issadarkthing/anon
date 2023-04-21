@@ -427,7 +427,6 @@ client.app.post("/:username/message", sendMessageLimiter, (req, res) => {
   const now = (new Date());
   const date = now.toISOString();
 
-  client.db
   client.dbRun(
     "INSERT INTO messages (user_id, ip, user_agent, time, message) VALUES (?, ?, ?, ?, ?)",
     user.id, ip, userAgent, date, data.message,
