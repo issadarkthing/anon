@@ -240,8 +240,21 @@ client.app.patch("/user/:username", limiter, protectedRoute, (req, res) => {
 
 client.app.get("/user/:username", limiter, (req, res) => {
   const username = req.params["username"];
+  const token = req.get("token");
+
+  if (!username) {
+    res.status(400).send("no user id");
+    return;
+  }
+
+  const fields = ["id", "username", "time", "description"];
+
+  if (token) {
+    fields.push("email");
+  }
+
   const user = client.dbGet<User>(`
-    SELECT username, time, description
+    SELECT ${fields.join(", ")}
     FROM users 
     WHERE username = ?`, 
     username,
@@ -252,6 +265,17 @@ client.app.get("/user/:username", limiter, (req, res) => {
     return;
   }
 
+  if (token) {
+    const generatedToken = createToken(user.id);
+
+    if (generatedToken !== token) {
+      res.status(403).send("invalid token");
+      return;
+    }
+  }
+
+  //@ts-ignore
+  delete user.id;
   res.send(user);
 });
 
