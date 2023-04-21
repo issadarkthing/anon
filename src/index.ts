@@ -173,10 +173,11 @@ client.app.post("/signup", signUpLimiter, (req, res) => {
   res.sendStatus(200);
 });
 
+
 client.app.patch("/user/:username", limiter, protectedRoute, (req, res) => {
   const username = req.params["username"];
   let user = client.dbGet<User>(`
-    SELECT username, time, description
+    SELECT username, time, description, email
     FROM users 
     WHERE username = ?`, 
     username,
@@ -194,8 +195,19 @@ client.app.patch("/user/:username", limiter, protectedRoute, (req, res) => {
     return;
   }
 
-
   const data = body.data;
+
+  const update = (field: string, value: string) => {
+    client.dbRun(
+      `
+      UPDATE users
+      SET ${field} = ?
+      WHERE username = ?
+      `,
+      value,
+      username,
+    );
+  }
 
   if (data.username) {
 
@@ -204,32 +216,20 @@ client.app.patch("/user/:username", limiter, protectedRoute, (req, res) => {
       return;
     }
 
-    client.dbRun(
-      `
-      UPDATE users
-      SET username = ?
-      WHERE username = ?
-      `,
-      data.username,
-      username,
-    );
+    update("username", data.username);
   }
 
   if (data.description) {
-    client.dbRun(
-      `
-      UPDATE users
-      SET description = ?
-      WHERE username = ?
-      `,
-      data.description,
-      username,
-    );
+    update("description", data.description);
+  }
+
+  if (data.email) {
+    update("email", data.email);
   }
 
   
   user = client.dbGet<User>(`
-    SELECT username, time, description
+    SELECT username, time, description, email
     FROM users 
     WHERE username = ?`, 
     username,
