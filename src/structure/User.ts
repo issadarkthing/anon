@@ -20,11 +20,13 @@ export interface User {
   password: string;
   time: string;
   email: string;
+  notify_email: boolean;
 }
 
 export const userUpdateBodySchema = z.object({
   username: z.string().max(MAX_USERNAME).optional(),
   description: z.string().max(MAX_DESCRIPTION).optional(),
   email: z.string().max(MAX_EMAIL).optional(),
+  notify_email: z.boolean().optional(),
 });
 

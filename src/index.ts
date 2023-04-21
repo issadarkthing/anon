@@ -178,7 +178,7 @@ client.app.post("/signup", signUpLimiter, (req, res) => {
 client.app.patch("/user/:username", limiter, protectedRoute, (req, res) => {
   const username = req.params["username"];
   let user = client.dbGet<User>(`
-    SELECT username, time, description, email
+    SELECT username, time, description, email, notify_email
     FROM users 
     WHERE username = ?`, 
     username,
@@ -198,7 +198,7 @@ client.app.patch("/user/:username", limiter, protectedRoute, (req, res) => {
 
   const data = body.data;
 
-  const update = (field: string, value: string) => {
+  const update = <T>(field: string, value: T) => {
     client.dbRun(
       `
       UPDATE users
@@ -210,9 +210,9 @@ client.app.patch("/user/:username", limiter, protectedRoute, (req, res) => {
     );
   }
 
-  if (data.username) {
+  if ("username" in data) {
 
-    if (!isValidUsername(data.username)) {
+    if (!isValidUsername(data.username!)) {
       res.status(400).send("invalid username");
       return;
     }
@@ -220,17 +220,20 @@ client.app.patch("/user/:username", limiter, protectedRoute, (req, res) => {
     update("username", data.username);
   }
 
-  if (data.description) {
+  if ("description" in data) {
     update("description", data.description);
   }
 
-  if (data.email) {
+  if ("email" in data) {
     update("email", data.email);
   }
 
+  if ("notify_email" in data) {
+    update("notify_email", data.notify_email ? 1 : 0);
+  }
   
   user = client.dbGet<User>(`
-    SELECT username, time, description, email
+    SELECT username, time, description, email, notify_email
     FROM users 
     WHERE username = ?`, 
     username,
@@ -248,10 +251,10 @@ client.app.get("/user/:username", limiter, (req, res) => {
     return;
   }
 
-  const fields = ["id", "username", "time", "description"];
+  const fields = [ "id", "username", "time", "description"];
 
   if (token) {
-    fields.push("email");
+    fields.push("email", "notify_email");
   }
 
   const user = client.dbGet<User>(`
@@ -434,7 +437,7 @@ client.app.post("/:username/message", sendMessageLimiter, (req, res) => {
 
   res.send(JSON.stringify(body.data));
 
-  if (user.email) {
+  if (user.email && user.notify_email) {
 
     fs.readFile("email.html", { encoding: "utf-8" }, (err, content) => {
       if (err) {
