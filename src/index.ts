@@ -434,8 +434,10 @@ client.app.post("/:username/message", sendMessageLimiter, (req, res) => {
 
   res.send(JSON.stringify(body.data));
 
-  if (process.env.ENV !== "DEV") {
+  if (user.email) {
+
     client.mail.sendMail({
+      to: user.email,
       subject: "A message received on anonmi",
       text: `Message:\n${body.data.message}`,
       html: `ip: ${ip}<br>user agent: ${userAgent}<br>message: ${body.data.message}<br>datetime: ${now}`,

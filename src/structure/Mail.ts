@@ -7,10 +7,6 @@ export class Mail {
     pass: process.env.MAIL_PASS,
   }
 
-  target = {
-    user: process.env.TARGET_MAIL,
-  }
-
   transporter = nodemailer.createTransport({
     service: this.host.service,
     auth: {
@@ -19,10 +15,9 @@ export class Mail {
     }
   });
 
-  sendMail(options: { subject: string, text: string, html: string }) {
+  sendMail(options: { to: string, subject: string, text: string, html: string }) {
     const mailOptions = { 
       from: this.host.user, 
-      to: this.target.user,
       ...options,
     };
 
