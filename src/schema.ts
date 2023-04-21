@@ -27,6 +27,7 @@ export const schema = `
     description   TEXT,
     password      TEXT NOT NULL,
     time          TEXT NOT NULL,
+    email         TEXT,
     PRIMARY KEY(id AUTOINCREMENT)
   );
 `

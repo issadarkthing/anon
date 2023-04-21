@@ -5,7 +5,8 @@
     "start": "node dist/index.js",
     "dev": "nodemon dist/index.js",
     "watch": "tsc -w",
-    "clean": "rm main.db*"
+    "clean": "rm main.db*",
+    "alter": "node dist/alter-db.js"
   },
   "engine": {
     "node": ">=17.0.0 <19.0.0"
