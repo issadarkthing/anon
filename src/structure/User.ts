@@ -18,6 +18,7 @@ export interface User {
   username: string;
   password: string;
   time: string;
+  email?: string;
 }
 
 export const userUpdateBodySchema = z.object({
